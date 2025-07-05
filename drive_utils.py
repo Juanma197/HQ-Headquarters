@@ -8,13 +8,13 @@ import streamlit as st
 def connect_to_drive():
     gauth = GoogleAuth()
 
-    # Convert toml.box.Box → dict (deep copy), then json dump
+    # Convert secrets to proper dict for JSON usage
     credentials = json.loads(json.dumps(dict(st.secrets["gdrive_service_account"])))
 
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as temp_file:
         json.dump(credentials, temp_file)
         temp_file.flush()
-        gauth.LoadServiceConfigFile(temp_file.name)
+        gauth.LoadServiceAccountCredentials(temp_file.name)
 
     gauth.ServiceAuth()
     return GoogleDrive(gauth)
