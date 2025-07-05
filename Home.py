@@ -1,7 +1,12 @@
 import streamlit as st
 from datetime import datetime
+from drive_utils import connect_to_drive  # Make sure drive_utils.py exists
 
 st.set_page_config(page_title="🏠 Welcome", layout="centered")
+
+# Connect to Google Drive (only once)
+drive = connect_to_drive()
+st.success("✅ Google Drive connected successfully.")
 
 # --- Language Selector ---
 language = st.selectbox("🌐 Language / Idioma", ["English", "Español"])
@@ -54,7 +59,6 @@ elif language == "Español":
     st.page_link("pages/Salary_Dividend.py", label="👤 Sueldo y Dividendos", icon="👤")
     st.page_link("pages/Filing_Calendar.py", label="📅 Calendario Fiscal", icon="📅")
     st.page_link("pages/Settings_Backup.py", label="⚙️ Configuración y Copia de Seguridad", icon="⚙️")
-
 
 
 
