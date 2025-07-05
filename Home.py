@@ -1,17 +1,23 @@
 import streamlit as st
 from datetime import datetime
-from drive_utils import connect_to_drive  # Make sure drive_utils.py exists
+from drive_utils import connect_to_drive
 
 st.set_page_config(page_title="🏠 Welcome", layout="centered")
+st.title("📁 Google Drive Test")
 
-# Connect to Google Drive (only once)
+# ✅ Connect to Google Drive only once
 drive = connect_to_drive()
 st.success("✅ Google Drive connected successfully.")
+
+# Optional: list root folder contents (for debugging or live files list)
+file_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
+for file in file_list:
+    st.write(f"{file['title']} ({file['id']})")
 
 # --- Language Selector ---
 language = st.selectbox("🌐 Language / Idioma", ["English", "Español"])
 
-# --- Content in both languages ---
+# --- Main UI in English ---
 if language == "English":
     st.title("🏠 Welcome to Your Accounting HQ")
     st.markdown("""
@@ -27,15 +33,16 @@ if language == "English":
     """)
 
     st.header("🚀 Quick Access")
-    st.page_link("pages/Income_Tracker.py", label="📥 Income Tracker", icon="📥")
-    #st.page_link("pages/Expense_Tracker.py", label="💸 Expense Tracker", icon="💸")
-    st.page_link("pages/Invoice_Generator.py", label="📄 Invoice Generator", icon="📄")
-    st.page_link("pages/Dashboard.py", label="📊 Dashboard", icon="📊")
-    st.page_link("pages/Export_Centre.py", label="📤 Export Centre", icon="📤")
-    st.page_link("pages/Salary_Dividend.py", label="👤 Salary & Dividends", icon="👤")
-    st.page_link("pages/Filing_Calendar.py", label="📅 Filing Calendar", icon="📅")
-    st.page_link("pages/Settings_Backup.py", label="⚙️ Settings & Backup", icon="⚙️")
+    st.page_link("pages/Income_Tracker.py", label="📥 Income Tracker")
+    #st.page_link("pages/Expense_Tracker.py", label="💸 Expense Tracker")
+    st.page_link("pages/Invoice_Generator.py", label="📄 Invoice Generator")
+    st.page_link("pages/Dashboard.py", label="📊 Dashboard")
+    st.page_link("pages/Export_Centre.py", label="📤 Export Centre")
+    st.page_link("pages/Salary_Dividend.py", label="👤 Salary & Dividends")
+    st.page_link("pages/Filing_Calendar.py", label="📅 Filing Calendar")
+    st.page_link("pages/Settings_Backup.py", label="⚙️ Settings & Backup")
 
+# --- Spanish UI ---
 elif language == "Español":
     st.title("🏠 Bienvenido a tu Sede Contable")
     st.markdown("""
@@ -51,14 +58,11 @@ elif language == "Español":
     """)
 
     st.header("🚀 Acceso Rápido")
-    st.page_link("pages/Income_Tracker.py", label="📥 Registro de Ingresos", icon="📥")
-    #st.page_link("pages/Expense_Tracker.py", label="💸 Registro de Gastos", icon="💸")
-    st.page_link("pages/Invoice_Generator.py", label="📄 Generador de Facturas", icon="📄")
-    st.page_link("pages/Dashboard.py", label="📊 Panel de Control", icon="📊")
-    st.page_link("pages/Export_Centre.py", label="📤 Centro de Exportación", icon="📤")
-    st.page_link("pages/Salary_Dividend.py", label="👤 Sueldo y Dividendos", icon="👤")
-    st.page_link("pages/Filing_Calendar.py", label="📅 Calendario Fiscal", icon="📅")
-    st.page_link("pages/Settings_Backup.py", label="⚙️ Configuración y Copia de Seguridad", icon="⚙️")
-
-
-
+    st.page_link("pages/Income_Tracker.py", label="📥 Registro de Ingresos")
+    #st.page_link("pages/Expense_Tracker.py", label="💸 Registro de Gastos")
+    st.page_link("pages/Invoice_Generator.py", label="📄 Generador de Facturas")
+    st.page_link("pages/Dashboard.py", label="📊 Panel de Control")
+    st.page_link("pages/Export_Centre.py", label="📤 Centro de Exportación")
+    st.page_link("pages/Salary_Dividend.py", label="👤 Sueldo y Dividendos")
+    st.page_link("pages/Filing_Calendar.py", label="📅 Calendario Fiscal")
+    st.page_link("pages/Settings_Backup.py", label="⚙️ Configuración y Copia de Seguridad")
