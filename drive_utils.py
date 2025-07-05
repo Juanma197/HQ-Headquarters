@@ -5,7 +5,7 @@ import streamlit as st
 @st.cache_resource
 def connect_to_drive():
     gauth = GoogleAuth()
-    gauth.LoadClientConfigFile("client_secrets.json")
-    gauth.LoadSettingsFile("settings.yaml")
-    gauth.LocalWebserverAuth()
+
+    # Automatically loads settings.yaml and client_secrets.json if present
+    gauth.LocalWebserverAuth()  # Opens browser login for first-time auth
     return GoogleDrive(gauth)
