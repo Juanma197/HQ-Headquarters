@@ -1,29 +1,42 @@
 import streamlit as st
+import pandas as pd
 from datetime import datetime
-from drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive, backup_locally
-import tempfile
 
-st.title("📅 Filing Calendar")
-
-property_name = st.selectbox("Select Property", ["Example House 1", "Example House 2"])
-drive = connect_to_drive()
-folder_ids = ensure_property_structure(drive, property_name)
-backup_folder_id = folder_ids["Backups"]
+st.set_page_config(page_title="📅 Filing Calendar", layout="centered")
+st.title("📅 Filing Calendar & HMRC Reminders")
 
 st.markdown("""
-### Deadlines
-- 📌 VAT Submission: 7th each month
-- 🧾 Corporation Tax: 9 months after year-end
-- 💼 Payroll filing: Last working day monthly
+This calendar shows all the key deadlines for your Services Ltd:
+- 🧾 VAT returns (quarterly)
+- 🏢 Corporation Tax (CT600)
+- 👤 Self Assessment
+- 📜 Annual Accounts + Confirmation Statement
 """)
 
-st.subheader("📝 Save a deadline reminder (optional)")
-reminder = st.text_input("Enter reminder note (e.g. 'VAT due soon')")
+today = datetime.today()
+current_year = today.year
 
-if st.button("💾 Save Reminder"):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp_file:
-        tmp_file.write(reminder.encode("utf-8"))
-        tmp_file_path = tmp_file.name
-    upload_file_to_drive(drive, backup_folder_id, tmp_file_path, filename="filing_reminder.txt")
-    backup_locally(tmp_file_path)
-    st.success("Reminder saved to Drive and backed up.")
+events = [
+    {"Event": "VAT Return (Q1)", "Date": f"{current_year}-04-07"},
+    {"Event": "VAT Return (Q2)", "Date": f"{current_year}-07-07"},
+    {"Event": "VAT Return (Q3)", "Date": f"{current_year}-10-07"},
+    {"Event": "VAT Return (Q4)", "Date": f"{current_year+1}-01-07"},
+    {"Event": "CT600 (Corporation Tax)", "Date": f"{current_year+1}-06-30"},
+    {"Event": "Self Assessment Deadline", "Date": f"{current_year+1}-01-31"},
+    {"Event": "Annual Accounts Due", "Date": f"{current_year+1}-09-30"},
+    {"Event": "Confirmation Statement", "Date": f"{current_year+1}-07-01"}
+]
+
+calendar_df = pd.DataFrame(events)
+calendar_df["Date"] = pd.to_datetime(calendar_df["Date"])
+calendar_df["Days Left"] = (calendar_df["Date"] - today).dt.days
+
+st.subheader("🗓️ Upcoming Deadlines")
+st.dataframe(calendar_df.sort_values(by="Date"), use_container_width=True)
+
+st.subheader("⏰ Next 3 Deadlines")
+st.table(calendar_df.sort_values(by="Date").head(3)[["Event", "Date", "Days Left"]])
+
+st.markdown("---")
+st.markdown("🔔 **Email Reminders Coming Soon** (Google Calendar integration planned)")
+
