@@ -1,21 +1,23 @@
-import json
-import tempfile
-from oauth2client.service_account import ServiceAccountCredentials
+import streamlit as st
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
-import streamlit as st
+import json
+import tempfile
 
 @st.cache_resource
 def connect_to_drive():
-    scope = ['https://www.googleapis.com/auth/drive']
+    # Extract service account credentials from Streamlit secrets
     credentials_dict = dict(st.secrets["gdrive_service_account"])
 
-    # Create credentials object from secrets
-    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
+    # Write credentials to a temporary JSON file
+    with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as temp_file:
+        json.dump(credentials_dict, temp_file)
+        temp_file.flush()
 
-    # Authorize with PyDrive2
-    gauth = GoogleAuth()
-    gauth.credentials = credentials
-    drive = GoogleDrive(gauth)
+        # Authenticate with PyDrive2 using the temporary file
+        gauth = GoogleAuth()
+        gauth.LoadServiceConfigSettings()  # optional: load settings.yaml if using
+        gauth.LoadCredentialsFile(temp_file.name)
+        gauth.ServiceAuth()
 
-    return drive
+    return GoogleDrive(gauth)
