@@ -1,41 +1,42 @@
 import streamlit as st
-import json, os
-from datetime import date, datetime
-from dateutil.parser import parse
-from utils_drive import upload_to_drive, ensure_folder_path
+from datetime import datetime
+import os
+from drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive, backup_locally
 
-st.set_page_config(page_title="⚙️ Settings & Backup", layout="centered")
-st.title("⚙️ Settings & Data Backup")
+st.set_page_config(page_title="⚙️ Settings & Backup")
 
-if 'properties' not in st.session_state:
-    st.session_state.properties = []
+st.title("⚙️ Settings & Backup")
+drive = connect_to_drive()
 
-st.subheader("🗂️ Choose Property for Backup")
-property_name = st.selectbox("Select Property", st.session_state.properties or ["No properties found"])
+property_name = st.selectbox("Select Property", ["Example House 1", "Example House 2", "Add New..."])
+if property_name == "Add New...":
+    property_name = st.text_input("Enter New Property Name")
+    if not property_name:
+        st.stop()
 
-st.subheader("📤 Backup Notes or Upload File")
-tab1, tab2 = st.tabs(["📝 Manual Note", "📁 Upload File"])
+folder_ids = ensure_property_structure(drive, property_name)
+backup_folder = folder_ids["Backups"]
 
-with tab1:
-    note = st.text_area("Enter a note or reminder to back up")
-    if st.button("📤 Upload Note to Drive"):
-        if property_name and note.strip():
-            today = datetime.today().strftime("%Y-%m")
-            local_file = f"backups/{property_name}_{today}_note.txt"
-            os.makedirs("backups", exist_ok=True)
-            with open(local_file, "w") as f:
-                f.write(note)
-            drive_path = f"AccountingHQ/{property_name}/Backups/{today}/"
-            upload_to_drive(drive_path, local_file)
-            st.success("Note uploaded to Drive and backed up locally.")
+st.subheader("📝 Backup Notes or Settings")
 
-with tab2:
-    uploaded_file = st.file_uploader("Upload backup or contract file")
-    if uploaded_file and st.button("📤 Upload File to Drive"):
-        today = datetime.today().strftime("%Y-%m")
-        local_path = f"backups/{uploaded_file.name}"
-        with open(local_path, "wb") as f:
-            f.write(uploaded_file.read())
-        drive_path = f"AccountingHQ/{property_name}/Backups/{today}/"
-        upload_to_drive(drive_path, local_path)
-        st.success("File uploaded to Drive and saved locally.")
+text_note = st.text_area("Write notes or settings manually:")
+if st.button("💾 Save Text Note"):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"settings_note_{timestamp}.txt"
+    local_path = os.path.join("temp", filename)
+    os.makedirs("temp", exist_ok=True)
+    with open(local_path, "w") as f:
+        f.write(text_note)
+    upload_file_to_drive(drive, backup_folder, local_path)
+    backup_locally(local_path)
+    st.success("✅ Note saved to Drive and local backup.")
+
+st.subheader("📁 Upload Backup File")
+uploaded = st.file_uploader("Upload file")
+if uploaded:
+    temp_path = os.path.join("temp", uploaded.name)
+    with open(temp_path, "wb") as f:
+        f.write(uploaded.read())
+    upload_file_to_drive(drive, backup_folder, temp_path)
+    backup_locally(temp_path)
+    st.success("✅ File uploaded to Drive and backed up locally.")
