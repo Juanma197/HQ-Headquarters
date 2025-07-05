@@ -1,62 +1,49 @@
 import streamlit as st
-from datetime import datetime
-import os
 import tempfile
+from datetime import datetime
 from drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive, backup_locally
 
 st.set_page_config(page_title="📥 Income Tracker", layout="centered")
-st.title("📥 Income Tracker")
+st.title("📥 Upload Income Document")
 
-# Connect to Drive
 drive = connect_to_drive()
+st.success("✅ Connected to Google Drive")
 
 # --- Property Selection ---
-property_name = st.selectbox("Select Property", ["Example House 1", "Example House 2", "Add New..."])
+property_name = st.selectbox("🏠 Select Property", ["Example House 1", "Example House 2", "Add New..."])
 if property_name == "Add New...":
-    property_name = st.text_input("Enter New Property Name")
+    property_name = st.text_input("Enter new property name")
     if not property_name:
         st.stop()
 
-# --- Ensure folder structure ---
 folder_ids = ensure_property_structure(drive, property_name)
+month_folder_id = folder_ids["Income"]
 
-# --- Month Selection ---
-selected_month = st.selectbox("Select Month", [datetime.today().strftime("%Y-%m")])  # Simplified for now
-
-# --- Upload Option ---
-st.subheader("📄 Upload File")
-uploaded_file = st.file_uploader("Choose a file to upload")
-
-if uploaded_file is not None:
-    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        tmp_file_path = tmp_file.name
-
-    st.success(f"File saved temporarily: {uploaded_file.name}")
-
-    folder_id = folder_ids['Income']  # Already contains month layer
-    uploaded_id = upload_file_to_drive(drive, folder_id, tmp_file_path, uploaded_file.name)
-    backup_locally(tmp_file_path)
-
-    st.success(f"✅ File uploaded to Google Drive (ID: {uploaded_id})")
-
-# --- Manual Entry Option ---
-st.subheader("📝 Manual Income Entry")
+# --- Upload Typed Entry ---
+st.subheader("📝 Enter Income Details Manually")
 date = st.date_input("Date", datetime.today())
 amount = st.number_input("Amount", min_value=0.0, step=0.01)
 description = st.text_input("Description")
-submit = st.button("Save Entry")
+save_entry = st.button("💾 Save Entry")
 
-if submit:
-    filename = f"income_{date}_{property_name.replace(' ', '_')}.txt"
-    content = f"Date: {date}\nAmount: {amount}\nDescription: {description}\nProperty: {property_name}\n"
+if save_entry:
+    content = f"Date: {date}\nAmount: {amount}\nDescription: {description}"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w") as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp_file:
-        tmp_file.write(content.encode())
-        tmp_file_path = tmp_file.name
+    file_id = upload_file_to_drive(drive, month_folder_id, tmp_path)
+    backup_locally(tmp_path)
+    st.success(f"✅ Entry uploaded to Drive (ID: {file_id}) and saved locally.")
 
-    folder_id = folder_ids['Income']
-    uploaded_id = upload_file_to_drive(drive, folder_id, tmp_file_path, filename)
-    backup_locally(tmp_file_path)
+# --- Upload File ---
+st.subheader("📎 Upload Document")
+uploaded_file = st.file_uploader("Choose a file")
+if uploaded_file is not None:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp.write(uploaded_file.read())
+        tmp_path = tmp.name
 
-    st.success(f"✅ Entry uploaded to Google Drive (ID: {uploaded_id})")
+    file_id = upload_file_to_drive(drive, month_folder_id, tmp_path, uploaded_file.name)
+    backup_locally(tmp_path)
+    st.success(f"✅ File uploaded to Drive (ID: {file_id}) and saved locally.")
