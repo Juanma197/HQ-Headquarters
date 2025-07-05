@@ -1,71 +1,60 @@
 import streamlit as st
-from drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive, backup_locally
-from datetime import datetime
-import os
 
-st.set_page_config(page_title="👤 Salary & Dividends", layout="centered")
-st.title("👤 Salary and Dividend Tracker")
+st.set_page_config(page_title="Salary & Dividend Simulator", layout="centered")
+st.title("👤 Salary + Dividend Simulator")
 
-# Connect to Google Drive
-drive = connect_to_drive()
-st.success("✅ Connected to Google Drive")
+CORP_TAX_RATE = 0.19
+DIVIDEND_ALLOWANCE = 500
+BASIC_RATE = 0.075
+HIGHER_RATE = 0.3375
+SALARY_PERSONAL_ALLOWANCE = 12570
 
-# Property selection
-property_name = st.selectbox("🏠 Select Property", ["Example House 1", "Example House 2", "Add New..."])
-if property_name == "Add New...":
-    property_name = st.text_input("Enter New Property Name")
-    if not property_name:
-        st.stop()
+st.markdown("""
+This tool helps you simulate how to pay yourself through **salary** and **dividends**.
+It calculates:
+- How much Corporation Tax you pay
+- Your personal tax from dividends and salary
+- Estimated take-home pay
+""")
 
-# Ensure folder structure exists
-folder_ids = ensure_property_structure(drive, property_name)
-month = datetime.today().strftime("%Y-%m")
+profit = st.number_input("Enter total profit (£)", min_value=0.0, step=100.0)
+salary = st.slider("Annual Salary (£)", 0, 50000, 12570, step=100)
+dividends = st.slider("Dividends (£)", 0, 100000, 10000, step=500)
 
-# --- Upload Salary File ---
-st.subheader("📤 Upload Salary Document")
-salary_file = st.file_uploader("Upload Salary Slip or Record", type=["pdf", "csv", "xlsx"])
-if salary_file:
-    temp_path = os.path.join("temp_salary_" + salary_file.name)
-    with open(temp_path, "wb") as f:
-        f.write(salary_file.read())
-    upload_file_to_drive(drive, folder_ids["Salary"], temp_path)
-    backup_locally(temp_path)
-    st.success(f"✅ '{salary_file.name}' uploaded to Salary folder and backed up locally")
+taxable_profit = max(0, profit - salary)
+corp_tax = taxable_profit * CORP_TAX_RATE
 
-# --- Enter Salary Data ---
-st.subheader("📝 Typed Salary Entry")
-name = st.text_input("Employee Name")
-amount = st.number_input("Salary Amount", min_value=0.0, format="%.2f")
-if st.button("Save Salary Record") and name:
-    content = f"Date: {datetime.today().strftime('%Y-%m-%d')}\nName: {name}\nAmount: £{amount:.2f}"
-    local_txt_path = f"salary_{name.replace(' ', '_')}_{datetime.today().strftime('%Y%m%d')}.txt"
-    with open(local_txt_path, "w") as f:
-        f.write(content)
-    upload_file_to_drive(drive, folder_ids["Salary"], local_txt_path)
-    backup_locally(local_txt_path)
-    st.success("✅ Salary entry saved and uploaded")
+salary_taxable = max(0, salary - SALARY_PERSONAL_ALLOWANCE)
+salary_tax = salary_taxable * 0.2 if salary_taxable > 0 else 0
 
-# --- Upload Dividend File ---
-st.subheader("📤 Upload Dividend Document")
-dividend_file = st.file_uploader("Upload Dividend Voucher or Record", type=["pdf", "csv", "xlsx"], key="div")
-if dividend_file:
-    temp_path = os.path.join("temp_dividend_" + dividend_file.name)
-    with open(temp_path, "wb") as f:
-        f.write(dividend_file.read())
-    upload_file_to_drive(drive, folder_ids["Salary"], temp_path)
-    backup_locally(temp_path)
-    st.success(f"✅ '{dividend_file.name}' uploaded to Salary folder and backed up locally")
+dividend_taxable = max(0, dividends - DIVIDEND_ALLOWANCE)
+dividend_tax = 0
+if dividend_taxable <= 50270 - salary:
+    dividend_tax = dividend_taxable * BASIC_RATE
+else:
+    basic_portion = max(0, 50270 - salary - DIVIDEND_ALLOWANCE)
+    higher_portion = dividend_taxable - basic_portion
+    dividend_tax = basic_portion * BASIC_RATE + higher_portion * HIGHER_RATE
 
-# --- Enter Dividend Data ---
-st.subheader("📝 Typed Dividend Entry")
-shareholder = st.text_input("Shareholder Name")
-dividend_amount = st.number_input("Dividend Amount", min_value=0.0, format="%.2f")
-if st.button("Save Dividend Record") and shareholder:
-    content = f"Date: {datetime.today().strftime('%Y-%m-%d')}\nShareholder: {shareholder}\nDividend: £{dividend_amount:.2f}"
-    local_txt_path = f"dividend_{shareholder.replace(' ', '_')}_{datetime.today().strftime('%Y%m%d')}.txt"
-    with open(local_txt_path, "w") as f:
-        f.write(content)
-    upload_file_to_drive(drive, folder_ids["Salary"], local_txt_path)
-    backup_locally(local_txt_path)
-    st.success("✅ Dividend entry saved and uploaded")
+total_personal_tax = salary_tax + dividend_tax
+total_corp_tax = corp_tax
+total_tax = total_personal_tax + total_corp_tax
+take_home = salary + dividends - total_personal_tax
+
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("👤 Total Personal Tax", f"£{total_personal_tax:,.2f}")
+    st.metric("🏢 Corporation Tax", f"£{total_corp_tax:,.2f}")
+with col2:
+    st.metric("💷 Take-Home Pay", f"£{take_home:,.2f}")
+    st.metric("📉 Total Tax Paid", f"£{total_tax:,.2f}")
+
+st.subheader("💡 Tip")
+if salary <= SALARY_PERSONAL_ALLOWANCE:
+    st.success("You're optimising salary below the tax-free allowance.")
+elif salary <= 12570 + 1000:
+    st.info("You're slightly above the allowance — some tax will apply.")
+else:
+    st.warning("You may want to reduce salary to stay within the £12,570 personal allowance.")
+
 
