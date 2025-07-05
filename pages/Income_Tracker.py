@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import json
+import tempfile
+from drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive
 
 st.title("📥 Income & 💸 Expense Tracker")
 
@@ -13,9 +16,19 @@ if 'properties' not in st.session_state:
 
 ownership_types = ["Personal", "Ltd"]
 properties = st.session_state["properties"]
+drive = connect_to_drive()
 
-def add_entry(storage, entry):
+def add_entry(storage, entry, folder_name, property_name):
     storage.append(entry)
+
+    # Save to Drive
+    folder_ids = ensure_property_structure(drive, property_name)
+    folder_id = folder_ids[folder_name]
+    filename = f"{entry['Date']}_{folder_name}_{property_name}.json"
+    save_path = tempfile.NamedTemporaryFile(delete=False, suffix=".json").name
+    with open(save_path, "w") as f:
+        json.dump(entry, f, indent=2)
+    upload_file_to_drive(drive, folder_id, save_path, filename)
 
 tab1, tab2 = st.tabs(["📥 Income", "💸 Expenses"])
 
@@ -34,14 +47,15 @@ with tab1:
             notes = st.text_input("Notes")
         submitted = st.form_submit_button("Add Income")
         if submitted:
-            add_entry(st.session_state.income, {
-                "Date": date,
+            entry = {
+                "Date": date.strftime("%Y-%m-%d"),
                 "Amount": amount,
                 "Category": category,
                 "Property": property_name,
                 "Ownership": ownership,
                 "Notes": notes
-            })
+            }
+            add_entry(st.session_state.income, entry, "Income", property_name)
             st.success("Income added.")
 
     st.subheader("Income Entries")
@@ -66,14 +80,15 @@ with tab2:
             notes = st.text_input("Notes", key="exp_notes")
         submitted = st.form_submit_button("Add Expense")
         if submitted:
-            add_entry(st.session_state.expenses, {
-                "Date": date,
+            entry = {
+                "Date": date.strftime("%Y-%m-%d"),
                 "Amount": amount,
                 "Type": expense_type,
                 "Property": property_name,
                 "Ownership": ownership,
                 "Notes": notes
-            })
+            }
+            add_entry(st.session_state.expenses, entry, "Expenses", property_name)
             st.success("Expense added.")
 
     st.subheader("Expense Entries")
