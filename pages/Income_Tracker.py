@@ -1,49 +1,84 @@
 import streamlit as st
-import tempfile
+import pandas as pd
 from datetime import datetime
-from drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive, backup_locally
 
-st.set_page_config(page_title="📥 Income Tracker", layout="centered")
-st.title("📥 Upload Income Document")
+st.title("📥 Income & 💸 Expense Tracker")
 
-drive = connect_to_drive()
-st.success("✅ Connected to Google Drive")
+if 'income' not in st.session_state:
+    st.session_state.income = []
+if 'expenses' not in st.session_state:
+    st.session_state.expenses = []
+if 'properties' not in st.session_state:
+    st.session_state.properties = []
 
-# --- Property Selection ---
-property_name = st.selectbox("🏠 Select Property", ["Example House 1", "Example House 2", "Add New..."])
-if property_name == "Add New...":
-    property_name = st.text_input("Enter new property name")
-    if not property_name:
-        st.stop()
+ownership_types = ["Personal", "Ltd"]
+properties = st.session_state["properties"]
 
-folder_ids = ensure_property_structure(drive, property_name)
-month_folder_id = folder_ids["Income"]
+def add_entry(storage, entry):
+    storage.append(entry)
 
-# --- Upload Typed Entry ---
-st.subheader("📝 Enter Income Details Manually")
-date = st.date_input("Date", datetime.today())
-amount = st.number_input("Amount", min_value=0.0, step=0.01)
-description = st.text_input("Description")
-save_entry = st.button("💾 Save Entry")
+tab1, tab2 = st.tabs(["📥 Income", "💸 Expenses"])
 
-if save_entry:
-    content = f"Date: {date}\nAmount: {amount}\nDescription: {description}"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w") as tmp:
-        tmp.write(content)
-        tmp_path = tmp.name
+with tab1:
+    st.header("Log Income")
+    with st.form("income_form"):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            date = st.date_input("Date", value=datetime.today())
+            amount = st.number_input("Amount (£)", min_value=0.0, step=10.0)
+        with col2:
+            category = st.selectbox("Category", ["Rental", "Management Fee", "Consulting"])
+            property_name = st.selectbox("Property", properties if properties else ["No properties found"])
+        with col3:
+            ownership = st.selectbox("Ownership Type", ownership_types)
+            notes = st.text_input("Notes")
+        submitted = st.form_submit_button("Add Income")
+        if submitted:
+            add_entry(st.session_state.income, {
+                "Date": date,
+                "Amount": amount,
+                "Category": category,
+                "Property": property_name,
+                "Ownership": ownership,
+                "Notes": notes
+            })
+            st.success("Income added.")
 
-    file_id = upload_file_to_drive(drive, month_folder_id, tmp_path)
-    backup_locally(tmp_path)
-    st.success(f"✅ Entry uploaded to Drive (ID: {file_id}) and saved locally.")
+    st.subheader("Income Entries")
+    income_df = pd.DataFrame(st.session_state.income)
+    if not income_df.empty:
+        st.dataframe(income_df)
+    else:
+        st.info("No income data yet.")
 
-# --- Upload File ---
-st.subheader("📎 Upload Document")
-uploaded_file = st.file_uploader("Choose a file")
-if uploaded_file is not None:
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        tmp.write(uploaded_file.read())
-        tmp_path = tmp.name
+with tab2:
+    st.header("Log Expense")
+    with st.form("expense_form"):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            date = st.date_input("Date", value=datetime.today(), key="exp_date")
+            amount = st.number_input("Amount (£)", min_value=0.0, step=5.0, key="exp_amount")
+        with col2:
+            expense_type = st.selectbox("Expense Type", ["Phone", "Mileage", "Software", "Repairs", "Utilities", "Other"])
+            property_name = st.selectbox("Property", properties if properties else ["No properties found"], key="exp_prop")
+        with col3:
+            ownership = st.selectbox("Ownership Type", ownership_types, key="exp_owner")
+            notes = st.text_input("Notes", key="exp_notes")
+        submitted = st.form_submit_button("Add Expense")
+        if submitted:
+            add_entry(st.session_state.expenses, {
+                "Date": date,
+                "Amount": amount,
+                "Type": expense_type,
+                "Property": property_name,
+                "Ownership": ownership,
+                "Notes": notes
+            })
+            st.success("Expense added.")
 
-    file_id = upload_file_to_drive(drive, month_folder_id, tmp_path, uploaded_file.name)
-    backup_locally(tmp_path)
-    st.success(f"✅ File uploaded to Drive (ID: {file_id}) and saved locally.")
+    st.subheader("Expense Entries")
+    exp_df = pd.DataFrame(st.session_state.expenses)
+    if not exp_df.empty:
+        st.dataframe(exp_df)
+    else:
+        st.info("No expense data yet.")
