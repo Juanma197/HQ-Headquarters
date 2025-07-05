@@ -6,7 +6,6 @@ import os
 
 @st.cache_resource
 def connect_to_drive():
-    # Build credentials dictionary using Streamlit secrets
     client_config = {
         "installed": {
             "client_id": st.secrets["google_oauth"]["client_id"],
@@ -17,18 +16,13 @@ def connect_to_drive():
         }
     }
 
-    # Write temporary JSON for PyDrive2 to read
     temp_path = "temp_client_secrets.json"
     with open(temp_path, "w") as f:
         json.dump(client_config, f)
 
-    # Authenticate with Google Drive
     gauth = GoogleAuth()
     gauth.LoadClientConfigFile(temp_path)
-    gauth.LocalWebserverAuth()
-    drive = GoogleDrive(gauth)
-
-    # Clean up the temp file after use
+    gauth.CommandLineAuth()  # <-- This works on Streamlit Cloud
     os.remove(temp_path)
 
-    return drive
+    return GoogleDrive(gauth)
