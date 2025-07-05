@@ -68,3 +68,14 @@ def backup_locally(local_path, backup_folder="backups"):
             dst_file.write(src_file.read())
     return dst
 
+def delete_property_folder(drive, property_name):
+    base_id = get_or_create_folder(drive, "AccountingHQ")
+    query = (
+        f"title='{property_name}' and mimeType='application/vnd.google-apps.folder' "
+        f"and trashed=false and '{base_id}' in parents"
+    )
+    results = drive.ListFile({'q': query}).GetList()
+    if results:
+        folder = results[0]
+        folder['trashed'] = True
+        folder.Upload()
