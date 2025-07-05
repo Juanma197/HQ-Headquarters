@@ -8,13 +8,12 @@ import streamlit as st
 def connect_to_drive():
     gauth = GoogleAuth()
 
-    # Convert secrets to JSON-compatible dict
-    credentials = json.loads(json.dumps(dict(st.secrets["gdrive_service_account"])))
-
+    # Save credentials to temp file
+    credentials = dict(st.secrets["gdrive_service_account"])
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as temp_file:
         json.dump(credentials, temp_file)
         temp_file.flush()
-        gauth.LoadCredentialsFile(temp_file.name)  # ← corrected here
+        gauth.LoadServiceConfigFile(temp_file.name)
 
     gauth.ServiceAuth()
     return GoogleDrive(gauth)
