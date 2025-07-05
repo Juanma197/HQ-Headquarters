@@ -1,49 +1,53 @@
-import streamlit as st
 import os
+import streamlit as st
+from drive_utils import connect_to_drive, list_files, download_file
+from datetime import datetime
 import zipfile
-from drive_utils import connect_to_drive, ensure_property_structure, list_files, download_file
+import io
 
 st.set_page_config(page_title="📤 Export Centre", layout="wide")
-st.title("📤 Export Files")
+st.title("📤 Export Centre")
 
 drive = connect_to_drive()
 
-property_name = st.selectbox("🏠 Select Property", ["Example House 1", "Example House 2", "Add New..."])
-if property_name == "Add New...":
-    property_name = st.text_input("Enter new property name")
-    if not property_name:
-        st.stop()
+property_name = st.selectbox("🏠 Select Property", ["Example House 1", "Example House 2"])
+category = st.selectbox("📂 Select Category", ["Income", "Expenses", "Invoices", "Salary", "Backups"])
+month = st.selectbox("🗓️ Select Month", [datetime.today().strftime("%Y-%m")])
 
-folder_ids = ensure_property_structure(drive, property_name)
+folder_structure = f"AccountingHQ/{property_name}/{category}/{month}"
 
-temp_dir = "temp_exports"
-os.makedirs(temp_dir, exist_ok=True)
+# Get folder ID recursively
+def get_folder_id_by_path(path_parts):
+    parent_id = None
+    for part in path_parts:
+        parent_id = get_or_create_folder(drive, part, parent_id)
+    return parent_id
 
-for category, folder_id in folder_ids.items():
-    st.subheader(f"📁 {category}")
-    files = list_files(drive, folder_id)
-    if not files:
-        st.markdown("_No files found._")
-        continue
+from drive_utils import get_or_create_folder
 
+folder_id = get_folder_id_by_path(folder_structure.split("/"))
+files = list_files(drive, folder_id)
+
+st.subheader("📄 Files")
+if not files:
+    st.info("No files found in the selected folder.")
+else:
     for file in files:
-        file_name = file['title']
-        file_id = file['id']
-        if st.button(f"⬇️ Download {file_name}", key=f"{category}_{file_id}"):
-            local_path = os.path.join(temp_dir, file_name)
-            download_file(drive, file_id, local_path)
-            with open(local_path, "rb") as f:
-                st.download_button(label=f"📥 Save {file_name}", data=f.read(), file_name=file_name)
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"**{file['title']}**")
+        with col2:
+            with open(f"temp_{file['title']}", "wb") as f:
+                file.GetContentFile(f.name)
+                with open(f.name, "rb") as f_read:
+                    st.download_button("⬇️ Download", f_read.read(), file_name=file['title'])
 
-# Optional ZIP download
-if st.button("📦 Download All as ZIP"):
-    zip_path = os.path.join(temp_dir, f"{property_name}_export.zip")
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        for category, folder_id in folder_ids.items():
-            files = list_files(drive, folder_id)
+    if st.button("📦 Download All as ZIP"):
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
             for file in files:
-                local_path = os.path.join(temp_dir, file['title'])
-                download_file(drive, file['id'], local_path)
-                zipf.write(local_path, arcname=os.path.join(category, file['title']))
-    with open(zip_path, 'rb') as f:
-        st.download_button("📦 Save ZIP", data=f.read(), file_name=os.path.basename(zip_path))
+                file_path = f"temp_{file['title']}"
+                file.GetContentFile(file_path)
+                zf.write(file_path, arcname=file['title'])
+        zip_buffer.seek(0)
+        st.download_button("⬇️ Download ZIP", zip_buffer.read(), file_name=f"{property_name}_{category}_{month}.zip")
