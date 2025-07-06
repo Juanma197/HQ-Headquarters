@@ -1,32 +1,12 @@
 import streamlit as st
-from drive_utils import connect_to_drive, ensure_property_structure
 from datetime import datetime
 
 st.set_page_config(page_title="🏠 Welcome", layout="centered")
-st.title("📁 Google Drive Test")
 
-# Connect to Drive
-drive = connect_to_drive()
-st.success("✅ Google Drive connected successfully.")
-
-# Property selection
-property_name = st.selectbox("Select Property", ["Example House 1", "Example House 2", "Add New..."], index=0)
-if property_name == "Add New...":
-    property_name = st.text_input("Enter New Property Name")
-    if not property_name:
-        st.stop()
-
-# Ensure folder structure
-folder_ids = ensure_property_structure(drive, property_name)
-
-# Display folders
-st.subheader(f"📂 Folders for {property_name}")
-for category, fid in folder_ids.items():
-    st.markdown(f"- **{category}** → Folder ID: `{fid}`")
-
-# Optional: Display full usage in English/Spanish
+# --- Language Selector ---
 language = st.selectbox("🌐 Language / Idioma", ["English", "Español"])
 
+# --- Content in both languages ---
 if language == "English":
     st.title("🏠 Welcome to Your Accounting HQ")
     st.markdown("""
@@ -41,6 +21,16 @@ if language == "English":
     - Backup your data easily
     """)
 
+    st.header("🚀 Quick Access")
+    st.page_link("pages/Income_Tracker.py", label="📥 Income Tracker", icon="📥")
+    #st.page_link("pages/Expense_Tracker.py", label="💸 Expense Tracker", icon="💸")
+    st.page_link("pages/Invoice_Generator.py", label="📄 Invoice Generator", icon="📄")
+    st.page_link("pages/Dashboard.py", label="📊 Dashboard", icon="📊")
+    st.page_link("pages/Export_Centre.py", label="📤 Export Centre", icon="📤")
+    st.page_link("pages/Salary_Dividend.py", label="👤 Salary & Dividends", icon="👤")
+    st.page_link("pages/Filing_Calendar.py", label="📅 Filing Calendar", icon="📅")
+    st.page_link("pages/Settings_Backup.py", label="⚙️ Settings & Backup", icon="⚙️")
+
 elif language == "Español":
     st.title("🏠 Bienvenido a tu Sede Contable")
     st.markdown("""
@@ -54,3 +44,17 @@ elif language == "Español":
     - Ver plazos de **presentaciones fiscales**
     - Hacer copias de seguridad fácilmente
     """)
+
+    st.header("🚀 Acceso Rápido")
+    st.page_link("pages/Income_Tracker.py", label="📥 Registro de Ingresos", icon="📥")
+    #st.page_link("pages/Expense_Tracker.py", label="💸 Registro de Gastos", icon="💸")
+    st.page_link("pages/Invoice_Generator.py", label="📄 Generador de Facturas", icon="📄")
+    st.page_link("pages/Dashboard.py", label="📊 Panel de Control", icon="📊")
+    st.page_link("pages/Export_Centre.py", label="📤 Centro de Exportación", icon="📤")
+    st.page_link("pages/Salary_Dividend.py", label="👤 Sueldo y Dividendos", icon="👤")
+    st.page_link("pages/Filing_Calendar.py", label="📅 Calendario Fiscal", icon="📅")
+    st.page_link("pages/Settings_Backup.py", label="⚙️ Configuración y Copia de Seguridad", icon="⚙️")
+
+
+
+
