@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from utils.drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive, ...
+from utils.drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive, delete_file_from_drive
+
 
 
 st.title("🏠 Property Management")
