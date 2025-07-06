@@ -3,7 +3,8 @@ import pandas as pd
 from datetime import datetime
 import json
 import tempfile
-from drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive
+from utils.drive_utils import connect_to_drive, ensure_property_structure, upload_file_to_drive, ...
+
 
 st.title("📄 Invoice Generator")
 
